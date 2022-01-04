@@ -1,0 +1,91 @@
+version: '3.4'
+
+services:
+    
+  centralizedlogging.invoiceapi:
+    image: ${DOCKER_REGISTRY-}centralizedloggingapigateway
+    build:
+      context: .
+      dockerfile: CentralizedLogging.InvoiceApi/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+    ports:
+      - "801:80"
+      - "443"
+    volumes:
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  centralizedlogging.orderapi:
+    image: ${DOCKER_REGISTRY-}centralizedloggingapigateway
+    build:
+      context: .
+      dockerfile: CentralizedLogging.OrderApi/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+    ports:
+      - "802:80"
+      - "443"
+    volumes:
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+   
+  centralizedlogging.paymentapi:
+    image: ${DOCKER_REGISTRY-}centralizedloggingapigateway
+    build:
+      context: .
+      dockerfile: CentralizedLogging.PaymentApi/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+    ports:
+      - "803:80"
+      - "443"
+    volumes:
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  rabbitmq:
+   container_name: rabbitmq
+   image: rabbitmq:3-management
+   environment:
+     - RABBITMQ_VHOST= /
+     - RABBITMQ_USERNAME=guest
+     - RABBITMQ_PASSWORD=guest
+     - RABBITMQ_NODE_TYPE=stats
+   ports:
+    - 5672:5672
+    - 15672:15672
+
+  elasticsearch:
+   container_name: elasticsearch
+   image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
+   ports:
+    - 9200:9200
+   volumes:
+    - elasticsearch-data:/usr/share/elasticsearch/data
+   environment:
+    - xpack.monitoring.enabled=true
+    - xpack.watcher.enabled=false
+    - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    - discovery.type=single-node
+   networks:
+    - elastic
+
+  kibana:
+   container_name: kibana
+   image: docker.elastic.co/kibana/kibana:7.9.2
+   ports:
+    - 5601:5601
+   depends_on:
+    - elasticsearch
+   environment:
+    - ELASTICSEARCH_URL=http://localhost:9200
+   networks:
+    - elastic
+
+networks:
+  elastic:
+    driver: bridge
+
+volumes:
+  elasticsearch-data:
